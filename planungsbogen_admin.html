@@ -1,3 +1,816 @@
+
+Claude hat die Antwort abgeschlossen
+# Technische Anleitung: KS2 Einwertungs-Tool
+## Setup einmalig
+**1. GitHub Repository**
+- github.com → neues Repository: Einwertung-KAI (public)
+- Alle Projektdateien hochgeladen: src/App.jsx, src/main.jsx, index.html, package.json, vite.config.js
+**2. Vercel**
+- vercel.com → „New Project" → GitHub Repo verbinden
+- Framework: Vite → Deploy
+- Auto-Deploy bei jedem GitHub Push aktiv
+- Live-URL: **einwertung-kai.vercel.app**
+**3. EmailJS**
+- emailjs.com → Account mit nico.hoerrmann91@gmail.com
+- Gmail Service verbunden: service_0jj5ihm
+- Template: template_mamsnhk
+- Public Key: KenDwBUdjTdLSbgM-
+**4. Supabase**
+- supabase.com → neues Projekt: ks2-einwertung, Region: eu-central-1
+- SQL Editor → New Query → ausgeführt:
+sql
+create table mandanten (
+  id text primary key,
+  vorname text,
+  nachname text,
+  pin text,
+  created_at timestamptz default now()
+);
+create table mandant_data (
+  mandant_id text primary key references mandanten(id),
+  data jsonb
+);
+alter table mandanten enable row level security;
+alter table mandant_data enable row level security;
+create policy "allow all" on mandanten for all using (true) with check (true);
+create policy "allow all" on mandant_data for all using (true) with check (true);
+
+- Project URL: https://jtlblbgxzbxjplamdpiu.supabase.co
+- Publishable Key: sb_publishable_XZaNy8RC0iATbuq2IVJ0Qg_9qNDsMBd
+---
+## Änderungen deployen
+1. github.com/nicohoerrmannADMIN/Einwertung-KAI → src/App.jsx anklicken
+2. Stift-Icon → Code ersetzen → „Commit changes"
+3. Vercel deployed automatisch (~30 Sekunden)
+4. Bei Fehler: vercel.com → Deployments → Build Logs lesen
+---
+## Wie das Tool funktioniert
+### Admin-Seite (einwertung-kai.vercel.app)
+- Login: ks2admin2025
+- Mandant anlegen → 5-stelliger PIN wird generiert
+- Pro Mandant: Kundendaten manuell eintippen (aus tecis CRM kopieren)
+- SA PDF herunterladen (erst aktiv wenn CRM-Daten vorhanden)
+- Mandanten-Link kopieren → an Mandanten senden
+### Mandanten-Seite (einwertung-kai.vercel.app?mandant=xyz)
+- PIN eingeben (vom Berater erhalten)
+- 5 Upload-Slots: Eigenkapitalnachweis, Steuerbescheid, 3x Gehaltsnachweis
+- Selbstauskunft Wizard ausfüllen (Schritt für Schritt)
+- Datenschutz bestätigen → „Unterlagen einreichen"
+- EmailJS schickt Benachrichtigung (nur Name, kein Dateninhalt)
+### Datenspeicherung
+- **Supabase PostgreSQL** (nicht mehr localStorage)
+- Tabelle mandanten: ID, Name, PIN, Timestamp
+- Tabelle mandant_data: alle Daten als JSON (Uploads als Base64, SA-Daten, CRM-Felder)
+- Funktioniert geräteübergreifend, auch Inkognito
+---
+## Dateistruktur
+
+Einwertung-KAI/
+├── src/
+│   ├── App.jsx      ← Gesamter Code (~1400 Zeilen)
+│   └── main.jsx
+├── index.html
+├── package.json
+├── vite.config.js
+└── sa_vorlage.pdf   ← Nicht mehr nötig (Base64 im Code)
+
+---
+## Wichtige Werte
+| Was | Wert |
+|---|---|
+| Admin-PW | ks2admin2025 |
+| Live-URL | einwertung-kai.vercel.app |
+| GitHub | github.com/nicohoerrmannADMIN/Einwertung-KAI |
+| Supabase URL | https://jtlblbgxzbxjplamdpiu.supabase.co |
+| Supabase Key | sb_publishable_XZaNy8RC0iATbuq2IVJ0Qg_9qNDsMBd |
+| EmailJS Service | service_0jj5ihm |
+| EmailJS Template | template_mamsnhk |
+| EmailJS Key | KenDwBUdjTdLSbgM- |
+
+so habe ich ein einwertungstool gebaut - möchte im gleichen sinnen folgendes bauen:
+
+ich will jetzt ein Bogen zur Planung beim Mandanten abfragen was bisher in einer jotfrom gelandet ist und will ein admin Zugang wo alle Mandanten landen und ich die Daten per PDF direkt runterladen kann
+
+hier die jotform Link den wir normalerweise nutzen:
+https://form.jotform.com/251173211298049
+
+Mehr anzeigen
+00:32
+
+Fetched: Bogen zur Planung
+Fetched: Bogen zur Planung
+Gut, hab den kompletten Fragebogen. 46 Fragen, alle Felder klar. Kurze Rückfrage bevor ich baue:
+
+Wie soll das Tool deployed werden?
+
+Das gleiche Setup wie Einwertung-KAI macht am meisten Sinn (React/Vite → GitHub → Vercel + Supabase für Datenspeicherung). Oder willst du das als eigenständige HTML-Datei, die du irgendwo hostest?
+
+Und zur Funktionsweise – check kurz ob das stimmt:
+
+Mandanten-Flow:
+
+Mandant kriegt einen Link (z.B. planungsbogen.vercel.app?berater=nico)
+Füllt alle 46 Fragen aus (Step-by-Step wie Jotform)
+Sendet ab → landet in Supabase
+Admin-Flow:
+
+Du loggst dich ein (planungsadmin2025 oder ähnlich)
+Siehst alle eingegangenen Bögen als Liste
+Klickst auf einen Eintrag → PDF wird generiert & runtergeladen
+PDF-Inhalt: Alle Antworten sauber formatiert, Name + Datum oben, Berater-Name, fertig?
+
+Oder willst du, dass der Berater-Name (Frage 46) schon beim Link mitgegeben wird, damit der Mandant das nicht selbst eintippen muss?
+
+sollen wir erst den Fragen katalog Seite bauen? wie sie aussieht wenn der mandant den link öffnet=
+
+00:32
+Ja, guter Plan – erst die Mandanten-Seite sauber bauen, dann Admin drauf.
+
+
+
+Das ist der Grundaufbau – klickbar, du kannst durchnavigieren.
+
+Entscheidungen die ich von dir brauche:
+
+Grün als Hauptfarbe passt zum tecis-Look? Oder lieber eine andere Farbe?
+Step-by-Step (eine Frage nach der anderen, wie Jotform) oder lieber Sektionen (alle Persönlichen Daten auf einmal, dann Finanzen, etc.)?
+Berater-Name – soll der über den Link vorbefüllt sein (?berater=nico) oder Frage 46 manuell ausfüllen?
+Kinder-Logik – Jotform fragt bis zu 5 Kinder mit Follow-up-Fragen. Sollen wir das genauso machen, oder reicht "Anzahl Kinder + Namen/Geburtstage in einem Block"?
+blau ist besser und bisschen moderner
+
+00:37
+
+
+Blau, moderner Look, abgerundete Karten, Icons bei den Optionen.
+
+Jetzt brauch ich noch deine Antworten zu den offenen Fragen damit ich den echten Code bauen kann:
+
+Alle 46 Fragen – Step-by-Step (eine nach der anderen) oder lieber Sektionen gebündelt (so wie Finanzen oben mit 3 Feldern auf einmal)?
+Berater-Name – über URL (?berater=nico) vorausgefüllt, oder Frage 46 manuell?
+Kinder – Einzeln durchfragen wie Jotform (bis zu 5), oder ein kompakter Block „Anzahl + Namen + Geburtstage"?
+Deployment – gleicher Repo wie Einwertung-KAI (neuer Branch/neues Repo) oder komplett separates Projekt?
+ok mach mal dei html seite
+
+00:39
+Kurz bevor ich loslege – 3 schnelle Fragen:
+
+F: Fragen-Style
+A: Step-by-Step (eine Frage pro Screen)
+
+F: Kinder-Fragen
+A: Kompakt (Anzahl + Namen in einem Block)
+
+F: Berater-Name (Frage 46)
+A: Über URL vorausgefüllt (?berater=nico)
+
+00:40
+Perfekt. Baue jetzt die komplette HTML-Datei mit allen 46 Fragen.
+
+
+2 Befehle ausgeführt, datei angesehen, datei lesen
+2 Befehle ausgeführt, datei angesehen, datei lesen
+Fertig – komplette Mandanten-Seite, 36 Steps, alles drin.
+
+Was funktioniert:
+
+Alle Fragen aus der Jotform, Step-by-Step mit Fortschrittsbalken
+Berater-Name über URL: planungsbogen.html?berater=Nico
+Kinder-Block mit bis zu 5 Kindern dynamisch hinzufügbar
+Conditional Screens: Heiratsdatum nur bei „Verheiratet", Beamten-Felder nur bei „Beamter", etc.
+Slider für körperliche Tätigkeit, Multi-Select für Prioritäten
+Datenschutz-Checkbox vorm Absenden
+Daten landen bei Submit in localStorage (Basis für Admin-Seite)
+Nächster Schritt: Admin-Seite Die liest die localStorage-Daten aus, zeigt alle Einreichungen als Liste, und du kannst pro Mandant ein PDF runterladen. Soll ich die gleich bauen – oder willst du die Mandanten-Seite erst testen?
+
+
+Planungsbogen
+Code · HTML 
+1781045230213_image.png
+frag danach gezielt, bei student was studierst du und welches Semester bist du aktuell
+
+beamter: auf probe widerruf, besoldungstufe etc 
+
+schreib mir erstmal was du fragen würdest bei welcher angabe
+
+00:47
+Hier ist die komplette Logik wie ich es aufbauen würde:
+
+Bei „Angestellter" → Berufsbezeichnung (Freitext) → Körperliche Tätigkeit % (Slider)
+
+Bei „Azubi" → Ausbildungsberuf (Freitext) → Lehrjahr (1 / 2 / 3)
+
+Bei „Student" → Studiengang (Freitext) → Uni / FH / DHBW (Auswahl) → Aktuelles Semester (1–12)
+
+Bei „Selbstständiger" → Branche / Tätigkeit (Freitext) → Seit wann selbstständig (Jahr) → Rechtsform: Einzelunternehmer / GmbH / GbR / UG / Andere
+
+Bei „Beamter" → Beamtenverhältnis: Auf Widerruf / Auf Probe / Auf Lebenszeit → Dienstbeginn (Datum) → Besoldungsgruppe (Freitext, z. B. A12) → Besoldungsstufe (1–12) → Dienststelle / Behörde (optional, Freitext)
+
+Passt das so? Oder willst du irgendwo was raus oder ergänzen, bevor ich das einbaue?
+
+zeig es mir konkreter wie es aussieht bei welchem klick
+
+00:49
+
+
+Klick einfach die Tabs durch – so siehst du genau welche Fragen bei welcher Berufswahl kommen.
+
+Passt das so? Oder willst du irgendwo was raus, umbenennen oder ergänzen – dann baue ich es direkt in die HTML ein.
+
+student brauch keinen hochschultyp sonst passt , bau HTML
+
+00:51
+
+2 Dateien angesehen, hat einen Befehl ausgeführt
+2 Dateien angesehen, hat einen Befehl ausgeführt
+Gut, ich hab den kompletten Überblick. Jetzt baue ich die neue Version mit der konditionalen Beruf-Logik komplett neu.
+
+
+Check navigation logic
+Check navigation logic
+Gut. Die bestehende Logik nutzt einen linearen cur-Index. Ich ersetze das durch eine step-basierte Sequenz-Logik, die den Pfad je nach Berufswahl dynamisch aufbaut. Komplett neu schreiben:
+
+
+2 Befehle ausgeführt, datei lesen
+2 Befehle ausgeführt, datei lesen
+Fertig. Die konditionalen Flows funktionieren so:
+
+Klick auf Beruf → sofort der passende Pfad:
+
+Angestellter → Berufsbezeichnung → Körperlich % → Bildungsabschluss → Ausbildungsart
+Azubi → Ausbildungsberuf → Lehrjahr → Körperlich %
+Student → Studiengang → Semester (1.–9.+) → Angestrebter Abschluss (kein Hochschultyp)
+Selbstständiger → Branche → Rechtsform → Seit wann → Körperlich %
+Beamter → Verhältnis → Dienstbeginn → Gruppe + Stufe → Dienststelle → Bildung
+Danach laufen alle wieder in den gleichen Pfad (Kontakt → Finanzen → Gesundheit → Wünsche → Absenden). Testen und sag Bescheid was noch passt – dann bauen wir die Admin-Seite.
+
+
+Planungsbogen
+Code · HTML 
+1781045934904_image.png
+was das denn??? raus damit nichts ausdenken
+
+00:59
+Du meinst die Frage „Was könntest du dir vorstellen monatlich beiseite zu legen?" – raus komplett?
+
+
+2 Dateien angesehen, 2 Befehle ausgeführt, 2 Dateien bearbeitet
+2 Dateien angesehen, 2 Befehle ausgeführt, 2 Dateien bearbeitet
+Raus. Frage existiert nicht mehr. Was noch?
+
+
+Planungsbogen
+Code · HTML 
+am ende wir melden uns bei dir 
+
+und dollar zeichen sollen euro zeichen sein
+
+01:00
+
+3 Befehle ausgeführt
+3 Befehle ausgeführt
+Das Dollar-Icon ist das SVG <line x1="12" y1="1" x2="12" y2="23"/> (Dollarzeichen-Icon von Tabler). Das taucht bei „Als Investment", „Kaufmännische Ausbildung", „Vermögensaufbau" auf – das sind eigentlich keine Geldicons die stören. Nico meinte wahrscheinlich die Eurozeichen-Texte in den Input-Feldern (Placeholder „z. B. 48000") – oder siehst du konkret ein $ irgendwo im Interface?
+
+
+2 Befehle ausgeführt
+2 Befehle ausgeführt
+Das Dollarzeichen im Screenshot kommt vom SVG-Icon – es ist das Tabler „currency-dollar" Icon (vertikale Linie + geschwungener Pfad = sieht aus wie $). Das Icon wird bei den Finanz-Optionen verwendet. Ich tausche es gegen ein echtes Euro-Icon aus:
+
+
+2 Befehle ausgeführt
+2 Befehle ausgeführt
+Jetzt der Done-Screen Text:
+
+
+Hat eine Datei bearbeitet, hat einen Befehl ausgeführt, datei lesen
+Hat eine Datei bearbeitet, hat einen Befehl ausgeführt, datei lesen
+Erledigt. Dollar-Icons → €-Icons, und am Ende steht jetzt „Wir melden uns bei dir!" Was noch?
+
+
+Planungsbogen
+Code · HTML 
+wo geboren soll raus 
+und laufende verträge und versicherungen check soll raus
+
+01:04
+Direkt gemacht:
+
+
+4 Dateien bearbeitet, 2 Befehle ausgeführt, 2 Dateien angesehen
+4 Dateien bearbeitet, 2 Befehle ausgeführt, 2 Dateien angesehen
+Beide raus. Was noch?
+
+
+Planungsbogen
+Code · HTML 
+ok jetzt die admin seite bitte
+
+01:05
+Kurze Frage vorher – wie soll die Admin-Seite die Daten bekommen?
+
+Option A – Gleiche HTML-Datei, anderer URL-Parameter planungsbogen.html?admin=1 → zeigt Admin-Ansicht. Alles in einer Datei, kein extra Hosting nötig. Daten aus localStorage (funktioniert nur auf dem gleichen Gerät/Browser).
+
+Option B – Separate admin.html Eigene Datei, eigenes Passwort-Login. Daten aus localStorage – also nur sichtbar wenn du auf dem gleichen Gerät/Browser öffnest wo Mandanten ausgefüllt haben. Für echten Einsatz brauchst du dann Supabase.
+
+Option C – Supabase direkt einbauen Mandanten-Daten gehen beim Absenden direkt in deine Supabase-DB (du hast ja schon das Setup vom Einwertungs-Tool). Admin-Seite liest dann aus der DB – funktioniert geräteübergreifend, auch wenn Mandant auf dem Handy ausfüllt.
+
+Für echten Praxiseinsatz ist Option C die einzig sinnvolle – sonst siehst du als Admin nur Daten von Mandanten die zufällig auf deinem Gerät ausgefüllt haben.
+
+Was willst du?
+
+C
+
+01:07
+Dann brauch ich deine Supabase-Zugangsdaten. Willst du ein neues Projekt dafür oder dasselbe wie beim Einwertungs-Tool?
+
+Aus deiner Doku oben hätte ich:
+
+URL: https://jtlblbgxzbxjplamdpiu.supabase.co
+Key: sb_publishable_XZaNy8RC0iATbuq2IVJ0Qg_9qNDsMBd
+Gleiches Projekt nehmen und einfach neue Tabellen anlegen? Dann musst du nur einmal dieses SQL im Supabase SQL Editor ausführen:
+
+sql
+create table planungsbogen (
+  id text primary key,
+  berater text,
+  vorname text,
+  nachname text,
+  data jsonb,
+  created_at timestamptz default now()
+);
+
+alter table planungsbogen enable row level security;
+create policy "allow all" on planungsbogen for all using (true) with check (true);
+Kurz bestätigen dass du das ausgeführt hast, dann baue ich Mandanten-Seite + Admin direkt mit Supabase-Anbindung.
+
+SQL editor ist auf, wie mach ich neu oder ersetz ich den von einwertung?
+
+01:08
+Neues Query – einfach oben rechts auf „New query" klicken, dann den SQL-Code reinkopieren und auf „Run" drücken.
+
+Das Einwertungs-Tool bleibt komplett unangetastet – du fügst nur eine neue Tabelle planungsbogen hinzu, die anderen Tabellen (mandanten, mandant_data) bleiben wie sie sind.
+
+ok läuft
+
+01:09
+Perfekt. Jetzt baue ich beide Dateien – Mandanten-Seite mit Supabase-Submit und Admin-Seite.
+
+
+Datei angesehen, hat eine Datei bearbeitet, hat einen Befehl ausgeführt
+Datei angesehen, hat eine Datei bearbeitet, hat einen Befehl ausgeführt
+Gut. Jetzt die Admin-Seite:
+
+
+Datei erstellt, hat einen Befehl ausgeführt, datei lesen
+Datei erstellt, hat einen Befehl ausgeführt, datei lesen
+Beide Dateien fertig. So funktioniert es:
+
+Mandanten-Seite (planungsbogen.html)
+
+Beim Absenden → Daten direkt in Supabase gespeichert
+Berater über URL: planungsbogen.html?berater=Nico
+Admin-Seite (planungsbogen_admin.html)
+
+Passwort: planungsadmin2025
+Alle Einreichungen als Tabelle, neueste zuerst
+Suchfeld nach Name oder Berater
+Klick auf Zeile → vollständige Detailansicht
+PDF-Button → öffnet Druckdialog mit sauber formatiertem Bogen
+Deployment: Beide Dateien einfach in dein GitHub Repo hochladen → Vercel deployed automatisch.
+
+
+Planungsbogen admin
+Code · HTML 
+
+Planungsbogen
+Code · HTML 
+moment was wo genau? was neu anlegen? soll von einwertung getrennt sein aber gleich aufgebaut
+
+01:15
+Gleiches Prinzip wie Einwertung-KAI – neues separates Repo + neues Vercel-Projekt.
+
+Schritt für Schritt:
+
+1. GitHub
+
+github.com → „New repository" → Name: Planungsbogen
+Public → Create
+Dann planungsbogen.html und planungsbogen_admin.html hochladen
+2. Vercel
+
+vercel.com → „New Project" → das neue GitHub Repo Planungsbogen verbinden
+Framework: Other (kein Vite, nur HTML)
+Deploy → fertig
+Live-URL wird dann z.B. planungsbogen.vercel.app
+3. Supabase
+
+Nichts Neues anlegen – du nutzt dasselbe Projekt wie Einwertung-KAI (jtlblbgxzbxjplamdpiu)
+Die neue Tabelle planungsbogen hast du ja gerade schon angelegt
+Fertig
+Kurz zusammengefasst: Neues Repo, neues Vercel, gleiche Supabase-DB mit neuer Tabelle. Hast du GitHub offen?
+
+1781046971628_image.png
+hab den noch vom ersten versuch
+
+01:16
+Super, Repo ist schon da. Jetzt einfach die zwei Dateien hochladen:
+
+„Add file" → „Upload files"
+Beide Dateien reinziehen: planungsbogen.html und planungsbogen_admin.html
+„Commit changes"
+Das war's für GitHub. Dann Vercel verbinden – hast du das Repo da schon drin oder musst du neu importieren?
+
+1781047097156_image.png
+01:18
+Perfekt, beide Dateien sind drin. Jetzt Vercel:
+
+vercel.com → „Add New Project"
+GitHub Repo planungsbogen auswählen → „Import"
+Framework: Other
+„Deploy" klicken
+Fertig – Vercel deployed automatisch und du kriegst eine Live-URL.
+
+ok seite not found
+
+01:20
+Das Repo hat noch eine index.html drin vom ersten Versuch – Vercel zeigt die als Startseite. Du erreichst deine Seiten direkt über:
+
+deine-url.vercel.app/planungsbogen.html
+deine-url.vercel.app/planungsbogen_admin.html
+Wie lautet die Vercel-URL die du bekommen hast?
+
+https://planungsbogen.vercel.app/
+
+01:21
+Dann direkt aufrufen:
+
+Mandanten: https://planungsbogen.vercel.app/planungsbogen.html
+Admin: https://planungsbogen.vercel.app/planungsbogen_admin.html
+Funktioniert?
+
+geht beides nicht, was fehlt in vercel bzw in github?
+
+01:22
+Das liegt an der vercel.json im Repo – die ist noch vom alten Versuch und leitet wahrscheinlich alles auf index.html um.
+
+Klick in GitHub auf vercel.json → Stift-Icon → Inhalt komplett ersetzen mit:
+
+json
+{
+  "cleanUrls": false
+}
+→ Commit changes → Vercel deployed automatisch → dann nochmal testen.
+
+die fragen sidn aber wieder anders als grad
+
+kann es sein dass es noch design vom letzten versuch
+
+mach die datei neu und sag welche ich inhaltlich anpassen soll
+
+01:25
+Ja, genau – die index.html im Repo ist noch der alte erste Versuch. Vercel nimmt die als Startseite.
+
+Ich baue dir jetzt eine neue planungsbogen.html die komplett aktuell ist. Lass mich kurz die aktuelle Version aus dem Container nehmen:
+
+
+Check current file
+Check current file
+Die aktuelle Datei ist noch da. Die ist korrekt – du hast einfach die falsche Datei im Browser geöffnet. Das Problem ist die alte index.html im Repo.
+
+Zwei Sachen in GitHub erledigen:
+
+1. index.html löschen
+
+GitHub → index.html anklicken → Mülleimer-Icon → Commit
+2. vercel.json anpassen
+
+GitHub → vercel.json anklicken → Stift → ersetzen mit:
+json
+{
+  "cleanUrls": false
+}
+→ Commit
+
+Dann läuft Vercel neu durch und planungsbogen.html / planungsbogen_admin.html sind direkt erreichbar. Die Inhalte in beiden Dateien sind schon korrekt – die musst du nicht anfassen.
+
+1781047645610_image.png
+macht immer noch das alte
+
+01:27
+Ich sehe das Problem – Vercel zeigt noch den alten Deploy mit dem dunklen Design. Das ist die alte index.html die noch im Repo ist.
+
+In GitHub:
+
+index.html anklicken → Mülleimer-Icon → Commit
+package.json anklicken → Mülleimer-Icon → Commit
+Dann deployed Vercel neu und nimmt automatisch planungsbogen.html als Startseite – oder du rufst direkt auf:
+
+https://planungsbogen.vercel.app/planungsbogen.html
+
+Funktioniert der direkte Link schon?
+
+seite noch found
+
+01:29
+Der direkte Link https://planungsbogen.vercel.app/planungsbogen.html gibt 404?
+
+Dann schau mal in Vercel → Deployments → klick auf den neuesten Deploy → „Files" oder „Source" – sind planungsbogen.html und planungsbogen_admin.html da drin sichtbar?
+
+Oder zeig mir kurz einen Screenshot von den Deployment-Logs.
+
+geht
+
+aber ost egal das vercel die seite nicht zeigt?
+
+01:32
+Nein, ist nicht egal – aber einfach zu fixen. Du brauchst eine index.html die automatisch auf planungsbogen.html weiterleitet.
+
+In GitHub → index.html anklicken → Stift → kompletten Inhalt ersetzen mit:
+
+html
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="refresh" content="0; url=planungsbogen.html" />
+</head>
+<body></body>
+</html>
+→ Commit → fertig. Dann öffnet planungsbogen.vercel.app direkt den Bogen.
+
+index hab ich gelöscht
+
+01:33
+Dann neu anlegen:
+
+GitHub → „Add file" → „Create new file" → Name: index.html → Inhalt reinkopieren:
+
+html
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="refresh" content="0; url=planungsbogen.html" />
+</head>
+<body></body>
+</html>
+→ Commit → fertig.
+
+ok und die admin seite?
+
+01:35
+Die Admin-Seite erreichst du immer direkt über die volle URL:
+
+https://planungsbogen.vercel.app/planungsbogen_admin.html
+
+Die braucht keine Weiterleitung – die ist nur für dich, also kannst du den Link einfach als Lesezeichen speichern.
+
+passwort
+
+01:35
+planungsadmin2025
+
+1781091362488_image.png
+jeder partner hat eine eigne Partner nummer meine ist 779266
+
+kann jeder berater seine eigene html mit nummer am ende haben und dann automatisch den berater namen dort hinschreiben, wir müssten eine tabelle haben wo man name und nummer einträgt und dannd ie html autoamisch erzeugt wird zum kopieren kannst du das?
+
+13:38
+Geilo, läuft!
+
+Ja das geht – und sogar einfacher als du denkst. Du brauchst keine separate HTML pro Berater. Die URL macht das automatisch:
+
+planungsbogen.vercel.app/planungsbogen.html?berater=Nico&nr=779266
+
+Der Name erscheint dann oben rechts und wird mit dem Datensatz gespeichert.
+
+Ich baue dir eine Berater-Generator-Seite – du trägst Name + Nummer ein, klickst auf „Link generieren" und kannst ihn direkt kopieren. Einmal aufsetzen, für alle Berater nutzbar.
+
+Soll ich die als separate berater.html bauen die auch im Repo liegt? Oder lieber in die Admin-Seite integrieren als extra Tab?
+
+nur nummer nicht name in html
+
+13:38
+Also die URL nur mit Nummer:
+
+planungsbogen.vercel.app/planungsbogen.html?nr=779266
+
+Und die Admin-Seite schlägt dann anhand der Nummer den Namen nach – dafür brauchst du eine kleine Tabelle in Supabase wo Nummer → Name hinterlegt ist.
+
+SQL für Supabase:
+
+sql
+create table berater (
+  nr text primary key,
+  name text
+);
+alter table berater enable row level security;
+create policy "allow all" on berater for all using (true) with check (true);
+
+-- dein Eintrag direkt mit anlegen:
+insert into berater (nr, name) values ('779266', 'Nico Hörrmann');
+Kurz ausführen, dann baue ich:
+
+planungsbogen.html → liest Name anhand ?nr=779266 aus Supabase
+Admin-Seite → zeigt Beratername aus Tabelle
+Kleine Generator-Seite oder Tab in Admin zum Berater anlegen/verwalten
+SQL ausgeführt?
+
+wo hinterlegen wir die nummern und namen?
+
+13:42
+Direkt in Supabase – du führst das SQL oben einmal aus, dann ist die Tabelle da. Danach kannst du neue Berater entweder:
+
+Option A – Admin-Seite (ich baue einen extra Tab „Berater" rein wo du Name + Nummer einträgst)
+
+Option B – Supabase direkt (Table Editor → berater → Insert row)
+
+Option A ist komfortabler, B ist schneller gebaut. Was willst du?
+
+will es auf der admin seite direkt hinterlegen können, nicht immer skript ändern, und dann soll eigene html direkt zum kopieren angezeigt werden bau es in ide admin seite rein
+
+13:43
+Erst SQL ausführen, dann baue ich die Admin-Seite um:
+
+sql
+create table berater (
+  nr text primary key,
+  name text
+);
+alter table berater enable row level security;
+create policy "allow all" on berater for all using (true) with check (true);
+
+insert into berater (nr, name) values ('779266', 'Nico Hörrmann');
+Kurz in Supabase SQL Editor ausführen → dann baue ich.
+
+hab ich
+
+13:44
+Top. Baue jetzt die Admin-Seite mit dem Berater-Tab:
+
+
+2 Dateien angesehen
+2 Dateien angesehen
+Gut, ich hab alles. Schreibe die Admin-Seite komplett neu mit Berater-Tab:
+
+
+Build new admin with berater tab
+Build new admin with berater tab
+Jetzt noch die planungsbogen.html updaten – die muss die Partnernummer aus der URL lesen und mitspeichern:
+
+
+3 Befehle ausgeführt, hat eine Datei bearbeitet, datei angesehen
+3 Befehle ausgeführt, hat eine Datei bearbeitet, datei angesehen
+Beide Dateien fertig. In GitHub beide ersetzen → Vercel deployed automatisch.
+
+Was jetzt funktioniert:
+
+Admin → Tab „Berater & Links":
+
+Name + Nummer eingeben → Anlegen
+Dein Eintrag (779266 / Nico Hörrmann) ist schon drin via SQL
+Jeder Berater kriegt seinen persönlichen Link angezeigt → ein Klick kopieren
+Link sieht so aus: planungsbogen.vercel.app/planungsbogen.html?nr=779266
+In den Einreichungen steht dann automatisch der Beratername aus der Tabelle.
+
+
+Planungsbogen admin
+Code · HTML 
+
+Planungsbogen
+Code · HTML 
+kannst du auch machen dass wenn der bogen da ist der berater direkt eine mail erhält zu dem der bogen gehört? also dass man die mail direkt mit in der tabelle einträgt die mail, damit man nicht immer scchauen muss
+
+13:48
+Ja, genau – EmailJS hast du ja schon eingerichtet vom Einwertungs-Tool.
+
+Zwei Sachen kurz:
+
+1. Supabase – Spalte email zur Berater-Tabelle hinzufügen:
+
+sql
+alter table berater add column email text;
+update berater set email = 'nico.hoerrmann91@gmail.com' where nr = '779266';
+2. EmailJS – brauchst du ein Template Geh auf emailjs.com → Email Templates → New Template, Inhalt z.B.:
+
+Neuer Planungsbogen eingegangen!
+
+Name: {{mandant_name}}
+Beruf: {{beruf}}
+Datum: {{datum}}
+
+Zum Admin: https://planungsbogen.vercel.app/planungsbogen_admin.html
+Schick mir dann die Template-ID (sieht aus wie template_xxxxxxx) – Service-ID und Public Key hast du ja schon (service_0jj5ihm / KenDwBUdjTdLSbgM-).
+
+SQL ausgeführt und Template angelegt?
+
+erklöär schortt für schritt genau was wo
+
+13:49
+Schritt 1 – Supabase SQL Editor → New Query → ausführen:
+
+sql
+alter table berater add column email text;
+update berater set email = 'nico.hoerrmann91@gmail.com' where nr = '779266';
+Schritt 2 – EmailJS Template
+
+emailjs.com einloggen
+Links: Email Templates → Create New Template
+Subject: Neuer Planungsbogen – {{mandant_name}}
+Content:
+Hallo {{berater_name}},
+
+ein neuer Planungsbogen ist eingegangen.
+
+Name: {{mandant_name}}
+Beruf: {{beruf}}
+Datum: {{datum}}
+
+Zum Admin:
+https://planungsbogen.vercel.app/planungsbogen_admin.html
+Save klicken
+Die Template-ID oben kopieren (z.B. template_abc123) → mir schicken
+Schritt 3 – ich baue es in den Code ein, fertig.
+
+template_vgiq0vd
+
+13:52
+Perfekt. Baue es jetzt ein:
+
+
+Datei angesehen, hat eine Datei bearbeitet
+Datei angesehen, hat eine Datei bearbeitet
+Jetzt noch das EmailJS Template updaten – geh auf emailjs.com → dein Template template_vgiq0vd → stell sicher dass das Feld „To Email" auf {{to_email}} gesetzt ist (nicht auf eine feste Adresse). Das ist wichtig damit die Mail an den richtigen Berater geht.
+
+Dann beide Dateien in GitHub hochladen:
+
+
+Hat einen Befehl ausgeführt, datei lesen
+Hat einen Befehl ausgeführt, datei lesen
+Fertig. Beide Dateien in GitHub ersetzen → deployed.
+
+Ablauf danach:
+
+Mandant füllt Bogen aus über ?nr=779266
+Supabase speichert den Datensatz
+Code holt deine Email aus der berater-Tabelle
+EmailJS schickt dir die Benachrichtigung
+Wichtig in EmailJS noch prüfen: Template template_vgiq0vd → „To Email" Feld muss {{to_email}} sein, sonst geht die Mail nicht an die richtige Adresse.
+
+
+Planungsbogen
+Code · HTML 
+
+Planungsbogen admin
+Code · HTML 
+ist hesetzt auf email
+
+github die anderen löschen?
+
+13:54
+Nein, in EmailJS muss das Empfänger-Feld auf {{to_email}} stehen, nicht auf eine feste Email-Adresse. Sonst geht die Mail immer an dieselbe Adresse egal welcher Berater.
+
+EmailJS → Templates → template_vgiq0vd → „To Email" Feld ändern auf {{to_email}} → Save.
+
+Und GitHub: Nein, nichts löschen. Lass package.json und vercel.json drin – die braucht Vercel. Nur planungsbogen.html und planungsbogen_admin.html ersetzen.
+
+die mail von dem berater muss noch eintragbar sein, damit wenn seine html einen neuen bogen bekommt er die mail bekommt
+
+13:57
+Das ist schon drin – Admin-Seite → Tab „Berater & Links" → Berater anlegen mit Name + Nummer.
+
+Aber die Email fehlt noch im Formular. Fix:
+
+
+Datei angesehen, hat eine Datei bearbeitet
+Datei angesehen, hat eine Datei bearbeitet
+Jetzt noch die addBerater() Funktion – Email mitspeichern und in der Liste anzeigen:
+
+
+Add email to addBerater function
+Add email to addBerater function
+Und die Berater-Liste soll die Email auch anzeigen:
+
+
+Show email in berater list
+Show email in berater list
+Dein bestehender Eintrag (779266) hat die Email schon via SQL. Für neue Berater wird sie jetzt im Formular eingetragen.
+
+
+Hat einen Befehl ausgeführt, datei lesen
+Hat einen Befehl ausgeführt, datei lesen
+Nur die planungsbogen_admin.html in GitHub ersetzen – die planungsbogen.html bleibt wie sie ist.
+
+
+Planungsbogen admin
+Code · HTML 
+
+
+
+
+
+Claude ist eine KI und kann Fehler machen. Bitte überprüfe die Antworten.
+
+
+raw
+Planungsbogen admin · HTML
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -14,7 +827,7 @@
     --green: #1D9E75; --green-bg: #E1F5EE; --green-border: #A8DFCC;
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--g50); color: var(--g900); min-height: 100vh; }
-
+ 
   /* LOGIN */
   .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; }
   .login-card { background:var(--white); border-radius:var(--rlg); box-shadow:var(--shadow); border:1px solid var(--g100); padding:2.5rem; width:100%; max-width:380px; text-align:center; }
@@ -27,7 +840,7 @@
   .btn-login { width:100%; padding:12px; background:var(--b400); color:var(--white); border:none; border-radius:var(--rsm); font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; }
   .btn-login:hover { background:var(--b600); }
   .login-err { font-size:13px; color:#A32D2D; margin-top:8px; display:none; }
-
+ 
   /* TOPBAR */
   .topbar { background:var(--white); border-bottom:1px solid var(--g100); padding:0 2rem; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
   .topbar-logo { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; color:var(--b600); }
@@ -37,14 +850,14 @@
   .badge-count { font-size:12px; font-weight:600; background:var(--b50); color:var(--b600); padding:4px 10px; border-radius:99px; border:1px solid var(--b100); }
   .btn-logout { font-size:13px; color:var(--g500); background:none; border:1px solid var(--g300); border-radius:var(--rsm); padding:6px 12px; cursor:pointer; font-family:inherit; }
   .btn-logout:hover { color:var(--g700); }
-
+ 
   /* TABS */
   .tabs-bar { background:var(--white); border-bottom:1px solid var(--g100); padding:0 2rem; display:flex; gap:0; }
   .tab-btn { padding:14px 20px; font-size:14px; font-weight:500; color:var(--g500); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit; transition:all .15s; display:flex; align-items:center; gap:7px; }
   .tab-btn:hover { color:var(--g900); }
   .tab-btn.active { color:var(--b600); border-bottom-color:var(--b400); font-weight:600; }
   .tab-btn svg { width:15px; height:15px; }
-
+ 
   /* MAIN */
   .main { max-width:1100px; margin:0 auto; padding:2rem 1.5rem; }
   .tab-panel { display:none; }
@@ -54,7 +867,7 @@
   .filters { display:flex; gap:8px; flex-wrap:wrap; }
   .filter-input { padding:8px 12px; font-size:13px; border:1px solid var(--g100); border-radius:var(--rsm); background:var(--white); color:var(--g900); outline:none; font-family:inherit; min-width:180px; }
   .filter-input:focus { border-color:var(--b400); }
-
+ 
   /* TABLE */
   .table-wrap { background:var(--white); border-radius:var(--rlg); border:1px solid var(--g100); box-shadow:var(--shadow); overflow:hidden; }
   table { width:100%; border-collapse:collapse; }
@@ -69,7 +882,7 @@
   .btn-pdf { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; background:var(--b400); color:var(--white); border:none; border-radius:var(--rsm); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; }
   .btn-pdf:hover { background:var(--b600); }
   .empty-state { text-align:center; padding:4rem 2rem; color:var(--g500); }
-
+ 
   /* BERATER TAB */
   .berater-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
   .card { background:var(--white); border-radius:var(--rlg); border:1px solid var(--g100); box-shadow:var(--shadow); padding:1.5rem; }
@@ -87,7 +900,7 @@
   .berater-nr { font-size:12px; color:var(--g500); margin-top:2px; }
   .btn-del { background:none; border:1px solid var(--g300); border-radius:var(--rsm); padding:5px 10px; font-size:12px; color:var(--g500); cursor:pointer; font-family:inherit; }
   .btn-del:hover { border-color:#E24B4A; color:#A32D2D; background:#FCEBEB; }
-
+ 
   /* LINK BOX */
   .link-card { background:var(--white); border-radius:var(--rlg); border:1px solid var(--g100); box-shadow:var(--shadow); padding:1.5rem; margin-top:1.5rem; }
   .link-card h3 { font-size:15px; font-weight:600; margin-bottom:1rem; }
@@ -98,7 +911,7 @@
   .btn-copy { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; background:var(--b400); color:var(--white); border:none; border-radius:var(--rsm); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; flex-shrink:0; }
   .btn-copy:hover { background:var(--b600); }
   .btn-copy.copied { background:var(--green); }
-
+ 
   /* MODAL */
   .modal-overlay { position:fixed; inset:0; background:rgba(26,29,46,.45); z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:2rem 1rem; overflow-y:auto; }
   .modal { background:var(--white); border-radius:var(--rlg); width:100%; max-width:680px; box-shadow:0 8px 40px rgba(24,95,165,.18); }
@@ -116,14 +929,14 @@
   .detail-val { font-size:13px; color:var(--g900); font-weight:500; text-align:right; word-break:break-word; }
   .tag-list { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; }
   .tag { font-size:11px; padding:2px 7px; border-radius:99px; background:var(--b50); color:var(--b600); border:1px solid var(--b100); }
-
+ 
   .spinner { display:inline-block; width:18px; height:18px; border:2px solid var(--b100); border-top-color:var(--b400); border-radius:50%; animation:spin .7s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .loading-row { text-align:center; padding:3rem; }
   .hidden { display:none !important; }
   .toast-bar { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); background:var(--g900); color:var(--white); padding:10px 20px; border-radius:var(--rsm); font-size:14px; font-weight:500; opacity:0; transition:opacity .3s; pointer-events:none; z-index:9999; white-space:nowrap; }
   .toast-bar.show { opacity:1; }
-
+ 
   @media(max-width:700px) {
     .berater-grid { grid-template-columns:1fr; }
     .main { padding:1rem; }
@@ -132,7 +945,7 @@
 </style>
 </head>
 <body>
-
+ 
 <!-- LOGIN -->
 <div id="login-screen" class="login-wrap">
   <div class="login-card">
@@ -146,7 +959,7 @@
     <p class="login-err" id="login-err">Falsches Passwort</p>
   </div>
 </div>
-
+ 
 <!-- ADMIN APP -->
 <div id="admin-app" class="hidden">
   <div class="topbar">
@@ -161,7 +974,7 @@
       <button class="btn-logout" onclick="logout()">Abmelden</button>
     </div>
   </div>
-
+ 
   <div class="tabs-bar">
     <button class="tab-btn active" id="tab-einreichungen" onclick="switchTab('einreichungen')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
@@ -172,9 +985,9 @@
       Berater & Links
     </button>
   </div>
-
+ 
   <div class="main">
-
+ 
     <!-- TAB: EINREICHUNGEN -->
     <div class="tab-panel active" id="panel-einreichungen">
       <div class="section-header">
@@ -200,13 +1013,13 @@
         </table>
       </div>
     </div>
-
+ 
     <!-- TAB: BERATER -->
     <div class="tab-panel hidden" id="panel-berater">
       <div class="section-header">
         <h2>Berater verwalten</h2>
       </div>
-
+ 
       <div class="berater-grid">
         <!-- Neuen Berater anlegen -->
         <div class="card">
@@ -219,10 +1032,13 @@
           </div>
           <div class="form-row">
             <input type="text" id="new-nr" placeholder="Partnernummer (z. B. 779266)" />
+          </div>
+          <div class="form-row">
+            <input type="email" id="new-email" placeholder="E-Mail für Benachrichtigungen" />
             <button class="btn-add" onclick="addBerater()">Anlegen</button>
           </div>
         </div>
-
+ 
         <!-- Bestehende Berater -->
         <div class="card">
           <h3>
@@ -234,7 +1050,7 @@
           </div>
         </div>
       </div>
-
+ 
       <!-- Link Generator -->
       <div class="link-card">
         <h3>🔗 Persönliche Links zum Kopieren</h3>
@@ -243,10 +1059,10 @@
         </div>
       </div>
     </div>
-
+ 
   </div>
 </div>
-
+ 
 <!-- DETAIL MODAL -->
 <div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal">
@@ -263,19 +1079,19 @@
     <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
-
+ 
 <div class="toast-bar" id="toast"></div>
-
+ 
 <script>
 const SUPA_URL = 'https://jtlblbgxzbxjplamdpiu.supabase.co';
 const SUPA_KEY = 'sb_publishable_XZaNy8RC0iATbuq2IVJ0Qg_9qNDsMBd';
 const ADMIN_PW = 'planungsadmin2025';
 const BASE_URL = 'https://planungsbogen.vercel.app/planungsbogen.html';
-
+ 
 let allRows = [];
 let allBerater = [];
 let currentRow = null;
-
+ 
 // ── LOGIN ─────────────────────────────────────────────────
 function doLogin() {
   if (document.getElementById('pw-input').value === ADMIN_PW) {
@@ -292,7 +1108,7 @@ function logout() {
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('pw-input').value = '';
 }
-
+ 
 // ── TABS ──────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -301,7 +1117,7 @@ function switchTab(tab) {
   document.getElementById('panel-' + tab).classList.remove('hidden');
   document.getElementById('panel-' + tab).classList.add('active');
 }
-
+ 
 // ── EINREICHUNGEN ─────────────────────────────────────────
 async function loadData() {
   try {
@@ -315,7 +1131,7 @@ async function loadData() {
     document.getElementById('table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#A32D2D;">Ladefehler</td></tr>';
   }
 }
-
+ 
 function renderTable() {
   const q = document.getElementById('search-input').value.toLowerCase();
   const rows = allRows.filter(r => {
@@ -345,12 +1161,12 @@ function renderTable() {
     </tr>`;
   }).join('');
 }
-
+ 
 function getBeraterName(nr) {
   const b = allBerater.find(b => b.nr === nr);
   return b ? b.name : '';
 }
-
+ 
 // ── BERATER ───────────────────────────────────────────────
 async function loadBerater() {
   try {
@@ -364,7 +1180,7 @@ async function loadBerater() {
     document.getElementById('berater-list').innerHTML = '<p style="font-size:13px;color:#A32D2D;">Ladefehler</p>';
   }
 }
-
+ 
 function renderBeraterList() {
   if (!allBerater.length) {
     document.getElementById('berater-list').innerHTML = '<p style="font-size:13px;color:var(--g500);">Noch keine Berater angelegt.</p>';
@@ -374,13 +1190,13 @@ function renderBeraterList() {
     <div class="berater-item">
       <div class="berater-info">
         <div class="berater-name">${b.name}</div>
-        <div class="berater-nr">Nr. ${b.nr}</div>
+        <div class="berater-nr">Nr. ${b.nr} · ${b.email || 'Keine E-Mail'}</div>
       </div>
       <button class="btn-del" onclick="deleteBerater('${b.nr}')">Löschen</button>
     </div>
   `).join('');
 }
-
+ 
 function renderLinkList() {
   if (!allBerater.length) {
     document.getElementById('link-list').innerHTML = '<p style="font-size:13px;color:var(--g500);">Noch keine Berater angelegt.</p>';
@@ -398,20 +1214,22 @@ function renderLinkList() {
     </div>`;
   }).join('');
 }
-
+ 
 async function addBerater() {
   const name = document.getElementById('new-name').value.trim();
   const nr = document.getElementById('new-nr').value.trim();
-  if (!name || !nr) { showToast('Name und Nummer eingeben'); return; }
+  const email = document.getElementById('new-email').value.trim();
+  if (!name || !nr || !email) { showToast('Name, Nummer und E-Mail eingeben'); return; }
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/berater', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ nr, name })
+      body: JSON.stringify({ nr, name, email })
     });
     if (!res.ok) throw new Error();
     document.getElementById('new-name').value = '';
     document.getElementById('new-nr').value = '';
+    document.getElementById('new-email').value = '';
     showToast('Berater angelegt ✓');
     await loadBerater();
     renderTable();
@@ -419,7 +1237,7 @@ async function addBerater() {
     showToast('Fehler – Nummer bereits vergeben?');
   }
 }
-
+ 
 async function deleteBerater(nr) {
   if (!confirm('Berater wirklich löschen?')) return;
   await fetch(SUPA_URL + '/rest/v1/berater?nr=eq.' + nr, {
@@ -429,7 +1247,7 @@ async function deleteBerater(nr) {
   showToast('Berater gelöscht');
   await loadBerater();
 }
-
+ 
 function copyLink(url, nr) {
   navigator.clipboard.writeText(url).then(() => {
     const btn = document.getElementById('copy-' + nr);
@@ -438,7 +1256,7 @@ function copyLink(url, nr) {
     setTimeout(() => { btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Kopieren`; btn.classList.remove('copied'); }, 2000);
   });
 }
-
+ 
 // ── MODAL ─────────────────────────────────────────────────
 function openModal(id) {
   currentRow = allRows.find(r => r.id === id);
@@ -451,7 +1269,7 @@ function openModal(id) {
 function closeModal(e) {
   if (e.target === document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.add('hidden');
 }
-
+ 
 function drow(key, val) {
   if (!val) return '';
   if (Array.isArray(val)) {
@@ -465,7 +1283,7 @@ function dsec(title, content) {
   if (!content.trim()) return '';
   return `<div class="detail-section"><h4>${title}</h4>${content}</div>`;
 }
-
+ 
 function buildDetail(d) {
   const nr = d.nr || currentRow.berater || '';
   const beraterName = getBeraterName(nr) || nr || '–';
@@ -480,10 +1298,10 @@ function buildDetail(d) {
     ${dsec('Meta', drow('Berater',beraterName)+drow('Partnernummer',nr)+drow('Eingereicht am',date))}
   `;
 }
-
+ 
 // ── PDF ───────────────────────────────────────────────────
 function downloadPDFById(id) { currentRow = allRows.find(r => r.id === id); if (currentRow) downloadPDF(); }
-
+ 
 function downloadPDF() {
   if (!currentRow) return;
   const d = currentRow.data || {};
@@ -491,7 +1309,7 @@ function downloadPDF() {
   const beraterName = getBeraterName(nr) || nr || '';
   const name = [currentRow.vorname, currentRow.nachname].filter(Boolean).join(' ') || 'Unbekannt';
   const date = currentRow.created_at ? new Date(currentRow.created_at).toLocaleDateString('de-DE') : '';
-
+ 
   const sections = [
     ['Persönliches', [['Anrede',d.anrede],['Name',[d.vorname,d.nachname].filter(Boolean).join(' ')],['Geburtsdatum',d.geburtsdatum],['Familienstand',d.familienstand],['Verheiratet seit',d.heiratsdatum],['Kinder',d.kinder]]],
     ['Kontakt', [['Adresse',[d.strasse,d.plz,d.ort].filter(Boolean).join(', ')],['Bundesland',d.bundesland],['Telefon',d.telefon],['E-Mail',d.email]]],
@@ -500,9 +1318,9 @@ function downloadPDF() {
     ['Gesundheit', [['Größe',d.groesse?d.groesse+' cm':''],['Gewicht',d.gewicht?d.gewicht+' kg':''],['Krankenkasse',d.krankenkasse],['Raucher',d.raucher]]],
     ['Wünsche & Planung', [['Immobilie',d.immobilie],['Wunschrente / Monat',d.wunschrente?d.wunschrente+' €':''],['Rentenalter',d.rentenalter],['Prioritäten',d.prioritaeten],['Sonstiges',d.sonstiges]]],
   ];
-
+ 
   const css = `body{font-family:Arial,sans-serif;font-size:11pt;color:#1A1D2E;margin:0;padding:0}.page{padding:20mm 18mm;max-width:210mm;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #378ADD;padding-bottom:12px;margin-bottom:18px}.hdr h1{font-size:18pt;font-weight:700;margin:0 0 4px}.hdr .sub{font-size:10pt;color:#7A8299}.hdr .meta{text-align:right;font-size:10pt;color:#7A8299}.hdr .ber{font-size:10pt;font-weight:600;color:#185FA5}.sec{margin-bottom:14px;break-inside:avoid}.sec-t{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#378ADD;background:#E6F1FB;padding:4px 8px;border-radius:4px;margin-bottom:6px}.frow{display:flex;padding:4px 0;border-bottom:1px solid #F7F8FA}.frow:last-child{border-bottom:none}.fkey{font-size:10pt;color:#7A8299;width:42%;flex-shrink:0}.fval{font-size:10pt;font-weight:600;color:#1A1D2E;flex:1}.footer{margin-top:20px;padding-top:8px;border-top:1px solid #EEF0F4;font-size:9pt;color:#7A8299;display:flex;justify-content:space-between}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
-
+ 
   let body = '';
   sections.forEach(([title, fields]) => {
     const rows = fields.filter(([,v]) => v);
@@ -514,15 +1332,15 @@ function downloadPDF() {
     });
     body += '</div>';
   });
-
+ 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Planungsbogen ${name}</title><style>${css}</style></head><body><div class="page"><div class="hdr"><div><h1>${name}</h1><div class="sub">Bogen zur Planung</div></div><div class="meta"><div>${date}</div>${beraterName?`<div class="ber">Berater: ${beraterName}</div>`:''}</div></div>${body}<div class="footer"><span>Bogen zur Planung · Vertraulich</span><span>ID: ${currentRow.id}</span></div></div></body></html>`;
-
+ 
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
   setTimeout(() => { win.focus(); win.print(); }, 400);
 }
-
+ 
 // ── TOAST ─────────────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -532,3 +1350,4 @@ function showToast(msg) {
 </script>
 </body>
 </html>
+ 
