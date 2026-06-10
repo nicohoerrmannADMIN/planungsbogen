@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Bogen zur Planung</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --b50: #E6F1FB; --b100: #B5D4F4; --b400: #378ADD; --b600: #185FA5; --b800: #0C447C;
+    --g50: #F7F8FA; --g100: #EEF0F4; --g300: #C8CDD8; --g500: #7A8299; --g700: #3D4358; --g900: #1A1D2E;
+    --white: #fff; --rsm: 8px; --rmd: 12px; --rlg: 18px;
+    --shadow: 0 2px 16px rgba(24,95,165,0.08), 0 1px 3px rgba(24,95,165,0.06);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--g50); color: var(--g900); min-height: 100vh; }
+  .topbar { position: fixed; top:0; left:0; right:0; z-index:100; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g100); padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-logo { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; color:var(--b600); }
+  .topbar-icon { width:30px; height:30px; border-radius:8px; background:var(--b400); display:flex; align-items:center; justify-content:center; }
+  .topbar-icon svg { width:16px; height:16px; }
+  .topbar-right { font-size:12px; color:var(--g500); }
+  .prog-wrap { position:fixed; top:56px; left:0; right:0; z-index:99; background:rgba(255,255,255,0.92); backdrop-filter:blur(12px); padding:10px 1.5rem 12px; border-bottom:1px solid var(--g100); }
+  .prog-meta { display:flex; justify-content:space-between; margin-bottom:7px; }
+  .prog-section { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--b600); }
+  .prog-count { font-size:12px; color:var(--g500); }
+  .prog-track { height:3px; background:var(--g100); border-radius:99px; overflow:hidden; }
+  .prog-fill { height:3px; background:var(--b400); border-radius:99px; width:2%; transition:width .4s cubic-bezier(.4,0,.2,1); }
+  .main { padding-top:130px; padding-bottom:3rem; display:flex; justify-content:center; min-height:100vh; }
+  .container { width:100%; max-width:540px; padding:0 1.25rem; }
+  .welcome { text-align:center; padding:2rem 0; }
+  .welcome-icon { width:64px; height:64px; border-radius:18px; background:var(--b400); display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; }
+  .welcome-icon svg { width:30px; height:30px; }
+  .welcome h1 { font-size:24px; font-weight:700; letter-spacing:-.02em; margin-bottom:12px; }
+  .welcome p { font-size:15px; color:var(--g500); line-height:1.65; max-width:380px; margin:0 auto 2rem; }
+  .card { background:var(--white); border-radius:var(--rlg); box-shadow:var(--shadow); border:1px solid var(--g100); padding:1.75rem; margin-bottom:1rem; }
+  .q-eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--b400); margin-bottom:10px; }
+  .q-title { font-size:19px; font-weight:600; letter-spacing:-.02em; line-height:1.3; margin-bottom:8px; }
+  .q-hint { font-size:13px; color:var(--g500); line-height:1.6; margin-bottom:1.25rem; }
+  .fl { display:flex; gap:8px; }
+  .fl > * { flex:1; }
+  label.lbl { font-size:12px; font-weight:500; color:var(--g700); margin-bottom:5px; display:block; }
+  .fw { margin-bottom:12px; }
+  input[type=text], input[type=email], input[type=number], input[type=tel], input[type=date], select, textarea {
+    width:100%; padding:11px 14px; font-size:15px; border:1.5px solid var(--g100); border-radius:var(--rsm);
+    background:var(--g50); color:var(--g900); outline:none; font-family:inherit;
+    transition:border-color .15s, box-shadow .15s; -webkit-appearance:none;
+  }
+  input:focus, select:focus, textarea:focus { border-color:var(--b400); background:var(--white); box-shadow:0 0 0 3px rgba(55,138,221,.12); }
+  textarea { resize:vertical; min-height:100px; line-height:1.55; }
+  .choice-grid { display:flex; gap:8px; flex-wrap:wrap; }
+  .cbtn { flex:1; min-width:80px; padding:12px 14px; border:1.5px solid var(--g100); border-radius:var(--rsm); background:var(--g50); color:var(--g700); font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; text-align:center; transition:all .15s; }
+  .cbtn:hover, .cbtn.active { border-color:var(--b400); background:var(--b50); color:var(--b600); }
+  .olist { display:flex; flex-direction:column; gap:7px; }
+  .oitem { padding:12px 16px; border:1.5px solid var(--g100); border-radius:var(--rsm); background:var(--g50); color:var(--g700); font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:12px; transition:all .15s; }
+  .oitem .ico { width:32px; height:32px; border-radius:8px; background:var(--g100); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s; }
+  .oitem .ico svg { width:16px; height:16px; }
+  .oitem:hover, .oitem.active { border-color:var(--b400); background:var(--b50); color:var(--b600); }
+  .oitem:hover .ico, .oitem.active .ico { background:var(--b100); }
+  .pill-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px; }
+  .pbtn { padding:9px 14px; border:1.5px solid var(--g100); border-radius:99px; background:var(--g50); color:var(--g700); font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; transition:all .15s; }
+  .pbtn:hover, .pbtn.active { border-color:var(--b400); background:var(--b50); color:var(--b600); }
+  .slider-val { font-size:18px; font-weight:600; color:var(--b600); margin-bottom:10px; display:block; }
+  input[type=range] { -webkit-appearance:none; width:100%; height:4px; background:var(--g100); border-radius:99px; outline:none; border:none; padding:0; box-shadow:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--b400); border:2px solid var(--white); box-shadow:0 1px 4px rgba(55,138,221,.35); cursor:pointer; }
+  .slider-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--g500); margin-top:6px; }
+  .child-row { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+  .child-row .fw { flex:1; margin-bottom:0; }
+  .child-rm { width:38px; height:38px; flex-shrink:0; border:1.5px solid var(--g100); border-radius:var(--rsm); background:var(--g50); color:var(--g500); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .child-rm:hover { border-color:#E24B4A; background:#FCEBEB; color:#A32D2D; }
+  .btn-add { display:flex; align-items:center; gap:8px; padding:9px 14px; margin-top:4px; border:1.5px dashed var(--g300); border-radius:var(--rsm); background:transparent; color:var(--g500); font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; transition:all .15s; width:100%; }
+  .btn-add:hover { border-color:var(--b400); color:var(--b600); }
+  .nav-row { display:flex; justify-content:space-between; align-items:center; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--g100); }
+  .btn-back { display:flex; align-items:center; gap:7px; padding:10px 18px; border:1.5px solid var(--g100); border-radius:var(--rsm); background:transparent; color:var(--g500); font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; transition:all .15s; }
+  .btn-back:hover { border-color:var(--g300); color:var(--g700); }
+  .btn-next { display:flex; align-items:center; gap:8px; padding:11px 26px; border:none; border-radius:var(--rsm); background:var(--b400); color:var(--white); font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; transition:background .15s; margin-left:auto; }
+  .btn-next:hover { background:var(--b600); }
+  .btn-next:active { transform:scale(.98); }
+  .dcheck { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:var(--g50); border:1.5px solid var(--g100); border-radius:var(--rsm); margin-bottom:1.25rem; cursor:pointer; }
+  .dcheck input[type=checkbox] { width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:var(--b400); cursor:pointer; }
+  .dcheck span { font-size:13px; color:var(--g500); line-height:1.5; }
+  .done-wrap { text-align:center; padding:1.5rem 0 .5rem; }
+  .done-ico { width:64px; height:64px; border-radius:50%; background:var(--b50); border:2px solid var(--b100); display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; }
+  .done-ico svg { width:28px; height:28px; }
+  .done-wrap h2 { font-size:21px; font-weight:700; margin-bottom:8px; }
+  .done-wrap p { font-size:14px; color:var(--g500); line-height:1.65; max-width:320px; margin:0 auto 1.75rem; }
+  .screen { display:none; }
+  .screen.active { display:block; }
+  .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); background:var(--g900); color:var(--white); padding:11px 20px; border-radius:var(--rsm); font-size:14px; font-weight:500; opacity:0; transition:opacity .3s; pointer-events:none; white-space:nowrap; z-index:9999; }
+  .toast.show { opacity:1; }
+  .section-divider { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--g500); margin:6px 0 10px; padding-top:10px; border-top:1px solid var(--g100); }
+  @media(max-width:480px){ .card{padding:1.25rem;} .q-title{font-size:17px;} .topbar{padding:0 1rem; .prog-wrap{padding:8px 1rem 10px;} .container{padding:0 1rem;} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="topbar-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+    </div>
+    Bogen zur Planung
+  </div>
+  <div class="topbar-right" id="beraterName"></div>
+</div>
+
+<div class="prog-wrap" id="progWrap" style="display:none">
+  <div class="prog-meta">
+    <span class="prog-section" id="progSection">Persönliches</span>
+    <span class="prog-count" id="progCount"></span>
+  </div>
+  <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+</div>
+
+<div class="main"><div class="container">
+
+<!-- WELCOME -->
+<div class="screen active" id="s-welcome">
+  <div class="welcome">
+    <div class="welcome-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+    </div>
+    <h1>Bogen zur Planung</h1>
+    <p>Schön, dass du dir Zeit nimmst! So können wir beim nächsten Treffen noch gezielter auf das eingehen, was für dich wirklich wichtig ist.</p>
+    <button class="btn-next" onclick="startForm()" style="margin:0 auto;padding:13px 36px;font-size:15px;">
+      Jetzt beginnen
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <p style="font-size:12px;color:var(--g500);margin-top:1.25rem;">Dauert ca. 5–8 Minuten · Alle Angaben DSGVO-konform</p>
+  </div>
+</div>
+
+<!-- PERSÖNLICHES -->
+<div class="screen" id="s-anrede">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-anrede">Persönliches</p>
+    <p class="q-title">Wie darf ich dich ansprechen?</p>
+    <div class="choice-grid">
+      <button class="cbtn" onclick="pick(this,'anrede');advance()">Herr</button>
+      <button class="cbtn" onclick="pick(this,'anrede');advance()">Frau</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-name">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-name">Persönliches</p>
+    <p class="q-title">Wie heißt du mit vollem Namen?</p>
+    <p class="q-hint">Das hilft uns, deine Angaben korrekt zuzuordnen.</p>
+    <div class="fl">
+      <div><label class="lbl">Vorname</label><input type="text" id="vorname" placeholder="Max" /></div>
+      <div><label class="lbl">Nachname</label><input type="text" id="nachname" placeholder="Mustermann" /></div>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-geburtsdatum">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-geburtsdatum">Persönliches</p>
+    <p class="q-title">Wann hast du Geburtstag?</p>
+    <p class="q-hint">Dein Alter kann für Fördermöglichkeiten relevant sein.</p>
+    <label class="lbl">Geburtsdatum</label>
+    <input type="date" id="geburtsdatum" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-familienstand">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-familienstand">Persönliches</p>
+    <p class="q-title">Wie ist dein aktueller Familienstand?</p>
+    <p class="q-hint">Wichtig für Förderungen, Steuerklassen und mögliche Zusatzoptionen.</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'familienstand');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Ledig</button>
+      <button class="oitem" onclick="pick(this,'familienstand');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Verheiratet</button>
+      <button class="oitem" onclick="pick(this,'familienstand');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="18" y1="11" x2="22" y2="11"/></svg></span>Geschieden</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-heiratsdatum">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-heiratsdatum">Persönliches</p>
+    <p class="q-title">Seit wann seid ihr verheiratet?</p>
+    <p class="q-hint">Hilft bei der Einordnung von Steuern und Förderungen.</p>
+    <label class="lbl">Hochzeitsdatum</label>
+    <input type="date" id="heiratsdatum" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-kinder">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-kinder">Persönliches</p>
+    <p class="q-title">Hast du Kinder?</p>
+    <p class="q-hint">Hilft uns, kindbezogene Förderungen mitzudenken.</p>
+    <div class="choice-grid">
+      <button class="cbtn" id="kinder-ja-btn" onclick="pick(this,'kinder');showKinder(true)">Ja</button>
+      <button class="cbtn" id="kinder-nein-btn" onclick="pick(this,'kinder');showKinder(false)">Nein</button>
+    </div>
+    <div id="kinder-block" style="display:none;margin-top:1.25rem;">
+      <p class="section-divider">Kinder</p>
+      <div id="kinder-list"></div>
+      <button class="btn-add" onclick="addChild()" id="btn-add-child">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Kind hinzufügen
+      </button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- BERUF - AUSWAHL -->
+<div class="screen" id="s-beruf">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-beruf">Beruf</p>
+    <p class="q-title">Was machst du aktuell beruflich?</p>
+    <p class="q-hint">Dein Job hilft uns, deine Situation besser einzuschätzen.</p>
+    <div class="olist">
+      <button class="oitem" onclick="pickBeruf(this,'Angestellter')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>Angestellter</button>
+      <button class="oitem" onclick="pickBeruf(this,'Azubi')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Azubi</button>
+      <button class="oitem" onclick="pickBeruf(this,'Student')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg></span>Student</button>
+      <button class="oitem" onclick="pickBeruf(this,'Selbstständiger')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>Selbstständiger</button>
+      <button class="oitem" onclick="pickBeruf(this,'Beamter')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Beamter</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- ANGESTELLTER -->
+<div class="screen" id="s-ang-bezeichnung">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ang-bezeichnung">Beruf · Angestellter</p>
+    <p class="q-title">Wie lautet deine genaue Berufsbezeichnung?</p>
+    <p class="q-hint">z. B. „Bürokaufmann" oder „IT-Systemelektroniker"</p>
+    <input type="text" id="berufsbezeichnung" placeholder="Deine Berufsbezeichnung" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-ang-koerperlich">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ang-koerperlich">Beruf · Angestellter</p>
+    <p class="q-title">Zu wie viel Prozent ist deine Tätigkeit körperlich?</p>
+    <p class="q-hint">Eine grobe Einschätzung reicht völlig aus.</p>
+    <span class="slider-val" id="kp-ang-val">30 %</span>
+    <input type="range" id="koerperlich" min="0" max="100" step="10" value="30" oninput="document.getElementById('kp-ang-val').textContent=this.value+' %'" />
+    <div class="slider-labels"><span>0 %</span><span>50 %</span><span>100 %</span></div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-ang-bildung">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ang-bildung">Beruf · Angestellter</p>
+    <p class="q-title">Was ist dein höchster Bildungsabschluss?</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l9-5-9-5-9 5 9 5z"/></svg></span>Abgeschlossenes Studium</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg></span>Abitur</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg></span>Fachabitur</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/></svg></span>Realschulabschluss</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/></svg></span>Hauptschulabschluss</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>Kein Abschluss</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-ang-ausbildung">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ang-ausbildung">Beruf · Angestellter</p>
+    <p class="q-title">Hast du eine abgeschlossene Berufsausbildung?</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'ausbildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>(Noch) keine</button>
+      <button class="oitem" onclick="pick(this,'ausbildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>Handwerkliche Ausbildung</button>
+      <button class="oitem" onclick="pick(this,'ausbildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>Industrielle Ausbildung</button>
+      <button class="oitem" onclick="pick(this,'ausbildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8a6 6 0 1 0 0 8M3 10h10M3 14h10"/></svg></span>Kaufmännische Ausbildung</button>
+      <button class="oitem" onclick="pick(this,'ausbildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span>Sonstige</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- AZUBI -->
+<div class="screen" id="s-az-beruf">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-az-beruf">Beruf · Azubi</p>
+    <p class="q-title">Was lernst du – welcher Ausbildungsberuf?</p>
+    <p class="q-hint">z. B. „Industriekaufmann", „Mechatroniker"</p>
+    <input type="text" id="ausbildungsberuf" placeholder="Dein Ausbildungsberuf" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-az-lehrjahr">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-az-lehrjahr">Beruf · Azubi</p>
+    <p class="q-title">In welchem Lehrjahr bist du?</p>
+    <div class="choice-grid">
+      <button class="cbtn" onclick="pick(this,'lehrjahr');advance()">1. Lehrjahr</button>
+      <button class="cbtn" onclick="pick(this,'lehrjahr');advance()">2. Lehrjahr</button>
+      <button class="cbtn" onclick="pick(this,'lehrjahr');advance()">3. Lehrjahr</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-az-koerperlich">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-az-koerperlich">Beruf · Azubi</p>
+    <p class="q-title">Zu wie viel Prozent ist deine Tätigkeit körperlich?</p>
+    <span class="slider-val" id="kp-az-val">30 %</span>
+    <input type="range" id="koerperlich-az" min="0" max="100" step="10" value="30" oninput="document.getElementById('kp-az-val').textContent=this.value+' %'" />
+    <div class="slider-labels"><span>0 %</span><span>50 %</span><span>100 %</span></div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- STUDENT -->
+<div class="screen" id="s-st-studiengang">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-st-studiengang">Beruf · Student</p>
+    <p class="q-title">Welchen Studiengang studierst du?</p>
+    <p class="q-hint">z. B. „BWL", „Wirtschaftsinformatik", „Medizin"</p>
+    <input type="text" id="studiengang" placeholder="Dein Studiengang" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-st-semester">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-st-semester">Beruf · Student</p>
+    <p class="q-title">In welchem Semester bist du aktuell?</p>
+    <div class="pill-row">
+      <button class="pbtn" onclick="pick(this,'semester');advance()">1.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">2.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">3.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">4.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">5.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">6.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">7.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">8.</button>
+      <button class="pbtn" onclick="pick(this,'semester');advance()">9.+</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-st-abschluss">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-st-abschluss">Beruf · Student</p>
+    <p class="q-title">Was ist dein angestrebter Abschluss?</p>
+    <div class="choice-grid">
+      <button class="cbtn" onclick="pick(this,'studienabschluss');advance()">Bachelor</button>
+      <button class="cbtn" onclick="pick(this,'studienabschluss');advance()">Master</button>
+      <button class="cbtn" onclick="pick(this,'studienabschluss');advance()">Staatsexamen</button>
+      <button class="cbtn" onclick="pick(this,'studienabschluss');advance()">Diplom</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- SELBSTSTÄNDIGER -->
+<div class="screen" id="s-ss-branche">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ss-branche">Beruf · Selbstständiger</p>
+    <p class="q-title">Was machst du – welche Branche oder Tätigkeit?</p>
+    <p class="q-hint">z. B. „IT-Beratung", „Handwerksbetrieb", „Online-Marketing"</p>
+    <input type="text" id="branche" placeholder="Deine Branche / Tätigkeit" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-ss-rechtsform">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ss-rechtsform">Beruf · Selbstständiger</p>
+    <p class="q-title">In welcher Rechtsform bist du tätig?</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'rechtsform');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Einzelunternehmer / Freiberufler</button>
+      <button class="oitem" onclick="pick(this,'rechtsform');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>GmbH</button>
+      <button class="oitem" onclick="pick(this,'rechtsform');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/></svg></span>UG</button>
+      <button class="oitem" onclick="pick(this,'rechtsform');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span>GbR</button>
+      <button class="oitem" onclick="pick(this,'rechtsform');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span>Andere</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-ss-seit">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ss-seit">Beruf · Selbstständiger</p>
+    <p class="q-title">Seit wann bist du selbstständig?</p>
+    <label class="lbl">Monat / Jahr</label>
+    <input type="month" id="selbst-seit" style="max-width:200px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-ss-koerperlich">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ss-koerperlich">Beruf · Selbstständiger</p>
+    <p class="q-title">Zu wie viel Prozent ist deine Tätigkeit körperlich?</p>
+    <span class="slider-val" id="kp-ss-val">30 %</span>
+    <input type="range" id="koerperlich-ss" min="0" max="100" step="10" value="30" oninput="document.getElementById('kp-ss-val').textContent=this.value+' %'" />
+    <div class="slider-labels"><span>0 %</span><span>50 %</span><span>100 %</span></div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- BEAMTER -->
+<div class="screen" id="s-bm-verhaeltnis">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-bm-verhaeltnis">Beruf · Beamter</p>
+    <p class="q-title">In welchem Beamtenverhältnis bist du?</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'beamtenverhaeltnis');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Auf Widerruf</button>
+      <button class="oitem" onclick="pick(this,'beamtenverhaeltnis');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Auf Probe</button>
+      <button class="oitem" onclick="pick(this,'beamtenverhaeltnis');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></span>Auf Lebenszeit</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-bm-dienstbeginn">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-bm-dienstbeginn">Beruf · Beamter</p>
+    <p class="q-title">Seit wann bist du im Dienst?</p>
+    <label class="lbl">Dienstbeginn</label>
+    <input type="date" id="dienstbeginn" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-bm-besoldung">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-bm-besoldung">Beruf · Beamter</p>
+    <p class="q-title">Besoldungsgruppe und Besoldungsstufe?</p>
+    <p class="q-hint">z. B. A12, Stufe 3</p>
+    <div class="fl" style="max-width:300px">
+      <div><label class="lbl">Gruppe</label><input type="text" id="besoldungsgruppe" placeholder="z. B. A12" /></div>
+      <div><label class="lbl">Stufe</label><input type="text" id="besoldungsstufe" placeholder="z. B. 3" /></div>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-bm-dienststelle">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-bm-dienststelle">Beruf · Beamter</p>
+    <p class="q-title">Bei welcher Behörde oder Dienststelle bist du?</p>
+    <p class="q-hint">Optional – z. B. „Finanzamt München", „Bundeswehr"</p>
+    <input type="text" id="dienststelle" placeholder="Deine Dienststelle (optional)" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+<div class="screen" id="s-bm-bildung">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-bm-bildung">Beruf · Beamter</p>
+    <p class="q-title">Was ist dein höchster Bildungsabschluss?</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l9-5-9-5-9 5 9 5z"/></svg></span>Abgeschlossenes Studium</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg></span>Abitur</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg></span>Fachabitur</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/></svg></span>Realschulabschluss</button>
+      <button class="oitem" onclick="pick(this,'bildung');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/></svg></span>Hauptschulabschluss</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- KONTAKT -->
+<div class="screen" id="s-adresse">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-adresse">Kontakt</p>
+    <p class="q-title">Wo bist du aktuell gemeldet?</p>
+    <p class="q-hint">Hilft uns, regionale Besonderheiten zu berücksichtigen.</p>
+    <div class="fw"><label class="lbl">Straße und Hausnummer</label><input type="text" id="strasse" placeholder="Musterstraße 12" /></div>
+    <div class="fl" style="margin-bottom:12px">
+      <div><label class="lbl">PLZ</label><input type="text" id="plz" placeholder="12345" /></div>
+      <div><label class="lbl">Ort</label><input type="text" id="ort" placeholder="Musterstadt" /></div>
+    </div>
+    <div class="fw">
+      <label class="lbl">Bundesland</label>
+      <select id="bundesland">
+        <option value="">Bitte wählen</option>
+        <option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option>
+        <option>Brandenburg</option><option>Bremen</option><option>Hamburg</option>
+        <option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option>
+        <option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option>
+        <option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option>
+        <option>Thüringen</option>
+      </select>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-telefon">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-telefon">Kontakt</p>
+    <p class="q-title">Wie können wir dich telefonisch erreichen?</p>
+    <input type="tel" id="telefon" placeholder="+49 170 1234567" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-email">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-email">Kontakt</p>
+    <p class="q-title">Und wie lautet deine E-Mail-Adresse?</p>
+    <p class="q-hint">Für Unterlagen, Termine oder kurze Updates – alles DSGVO-konform.</p>
+    <input type="email" id="email" placeholder="deine@email.de" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- FINANZEN -->
+<div class="screen" id="s-jahresbrutto">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-jahresbrutto">Finanzen</p>
+    <p class="q-title">Wie hoch ist dein Jahresbrutto ungefähr?</p>
+    <p class="q-hint">Wichtig, um passende Förderungen und steuerliche Vorteile zu prüfen.</p>
+    <label class="lbl">Jahresbrutto in €</label>
+    <input type="number" id="jahresbrutto" placeholder="z. B. 48000" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-netto">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-netto">Finanzen</p>
+    <p class="q-title">Was bleibt dir netto im Monat übrig?</p>
+    <p class="q-hint">Der Betrag, der dir nach Steuern überwiesen wird.</p>
+    <label class="lbl">Netto pro Monat in €</label>
+    <input type="number" id="netto" placeholder="z. B. 2800" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-ausgaben">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ausgaben">Finanzen</p>
+    <p class="q-title">Wie viel gibst du im Monat ungefähr aus?</p>
+    <p class="q-hint">So sehen wir, wie viel Spielraum aktuell vorhanden ist.</p>
+    <label class="lbl">Monatliche Ausgaben in €</label>
+    <input type="number" id="ausgaben" placeholder="z. B. 2200" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-ruecklagen">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-ruecklagen">Finanzen</p>
+    <p class="q-title">Hast du Rücklagen auf der Seite?</p>
+    <p class="q-hint">Zur Orientierung – ob als Reserve oder zur weiteren Nutzung.</p>
+    <label class="lbl">Rücklagen in €</label>
+    <input type="number" id="ruecklagen" placeholder="z. B. 10000" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-schulden">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-schulden">Finanzen</p>
+    <p class="q-title">Hast du aktuell laufende Kredite oder Verbindlichkeiten?</p>
+    <p class="q-hint">z. B. Auto, Konsumkredit oder Studienkredit.</p>
+    <div class="choice-grid" style="margin-bottom:1rem">
+      <button class="cbtn" onclick="pick(this,'schulden');document.getElementById('schulden-detail').style.display='block'">Ja</button>
+      <button class="cbtn" onclick="pick(this,'schulden');document.getElementById('schulden-detail').style.display='none'">Nein</button>
+    </div>
+    <div id="schulden-detail" style="display:none">
+      <label class="lbl">Welche und ca. wie hoch?</label>
+      <textarea id="schulden_info" placeholder="z. B. Autokredit 8.000 €, noch 24 Monate..."></textarea>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- GESUNDHEIT -->
+<div class="screen" id="s-groesse">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-groesse">Gesundheit</p>
+    <p class="q-title">Wie groß bist du?</p>
+    <p class="q-hint">In cm. Wird für manche Absicherungs-Themen benötigt.</p>
+    <label class="lbl">Körpergröße in cm</label>
+    <input type="number" id="groesse" placeholder="z. B. 178" style="max-width:150px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-gewicht">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-gewicht">Gesundheit</p>
+    <p class="q-title">Und wie viel wiegst du aktuell?</p>
+    <p class="q-hint">In kg. Wird manchmal für Gesundheitsfragen gebraucht.</p>
+    <label class="lbl">Körpergewicht in kg</label>
+    <input type="number" id="gewicht" placeholder="z. B. 80" style="max-width:150px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-krankenkasse">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-krankenkasse">Gesundheit</p>
+    <p class="q-title">Bei welcher Krankenkasse bist du?</p>
+    <input type="text" id="krankenkasse" placeholder="z. B. AOK, TK, Barmer..." />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-raucher">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-raucher">Gesundheit</p>
+    <p class="q-title">Rauchst du?</p>
+    <p class="q-hint">Spielt bei Gesundheits- und Risikothemen eine Rolle.</p>
+    <div class="choice-grid">
+      <button class="cbtn" onclick="pick(this,'raucher');advance()">Ja</button>
+      <button class="cbtn" onclick="pick(this,'raucher');advance()">Nein</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- WÜNSCHE -->
+<div class="screen" id="s-immobilie">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-immobilie">Wünsche</p>
+    <p class="q-title">Planst du eine Immobilie?</p>
+    <p class="q-hint">Egal ob eigenes Zuhause oder Kapitalanlage.</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'immobilie');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Zum Eigennutz</button>
+      <button class="oitem" onclick="pick(this,'immobilie');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8a6 6 0 1 0 0 8M3 10h10M3 14h10"/></svg></span>Als Investment</button>
+      <button class="oitem" onclick="pick(this,'immobilie');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>Beides</button>
+      <button class="oitem" onclick="pick(this,'immobilie');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>Aktuell nicht geplant</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-wunschrente">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-wunschrente">Wünsche</p>
+    <p class="q-title">Wie viel Rente würdest du dir später wünschen?</p>
+    <p class="q-hint">Einfach, was sich für dich gut anfühlen würde.</p>
+    <label class="lbl">Wunschbetrag monatlich in €</label>
+    <input type="number" id="wunschrente" placeholder="z. B. 2500" style="max-width:220px" />
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-rentenalter">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-rentenalter">Wünsche</p>
+    <p class="q-title">Wann möchtest du spätestens in Rente gehen?</p>
+    <div class="olist">
+      <button class="oitem" onclick="pick(this,'rentenalter');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Mit 55–58</button>
+      <button class="oitem" onclick="pick(this,'rentenalter');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Mit 59–63</button>
+      <button class="oitem" onclick="pick(this,'rentenalter');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Mit 63–67</button>
+      <button class="oitem" onclick="pick(this,'rentenalter');advance()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Gesetzliches Rentenalter</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-prioritaeten">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-prioritaeten">Wünsche</p>
+    <p class="q-title">Was ist dir beim Thema Finanzen am wichtigsten?</p>
+    <p class="q-hint">Mehrere Antworten möglich.</p>
+    <div class="olist" id="prio-list">
+      <button class="oitem" onclick="multiPick(this)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Absicherung & Schutz</button>
+      <button class="oitem" onclick="multiPick(this)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>Eigene Immobilie</button>
+      <button class="oitem" onclick="multiPick(this)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>Altersvorsorge</button>
+      <button class="oitem" onclick="multiPick(this)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8a6 6 0 1 0 0 8M3 10h10M3 14h10"/></svg></span>Vermögensaufbau</button>
+      <button class="oitem" onclick="multiPick(this)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Flexibilität & Liquidität</button>
+      <button class="oitem" onclick="multiPick(this)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Familie absichern</button>
+    </div>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-sonstiges">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-sonstiges">Wünsche</p>
+    <p class="q-title">Gibt es besondere Wünsche oder Gedanken?</p>
+    <p class="q-hint">Egal ob etwas Konkretes oder einfach ein Gefühl – alles was dir wichtig ist.</p>
+    <textarea id="sonstiges" placeholder="Deine Gedanken..."></textarea>
+    <div class="nav-row"><button class="btn-back" onclick="back()">← Zurück</button><button class="btn-next" onclick="advance()">Weiter →</button></div>
+  </div>
+</div>
+
+<!-- ABSCHLUSS -->
+<div class="screen" id="s-datenschutz">
+  <div class="card">
+    <p class="q-eyebrow" id="ey-datenschutz">Abschluss</p>
+    <p class="q-title">Fast geschafft!</p>
+    <p class="q-hint">Bitte bestätige kurz, dass wir deine Daten verarbeiten dürfen.</p>
+    <label class="dcheck">
+      <input type="checkbox" id="datenschutz" />
+      <span>Ich stimme zu, dass meine Angaben zur Vorbereitung des Beratungsgesprächs gespeichert und verarbeitet werden. Eine Weitergabe an Dritte erfolgt nicht.</span>
+    </label>
+    <div class="nav-row">
+      <button class="btn-back" onclick="back()">← Zurück</button>
+      <button class="btn-next" onclick="submitForm()">Jetzt absenden →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DONE -->
+<div class="screen" id="s-done">
+  <div class="card">
+    <div class="done-wrap">
+      <div class="done-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2>Vielen Dank!</h2>
+      <p>Deine Angaben wurden sicher übermittelt. Wir melden uns bei dir!</p>
+    </div>
+  </div>
+</div>
+
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const p = new URLSearchParams(location.search);
+const nr = p.get('nr') || '';
+
+const data = { nr };
+
+// ── Sequences ──────────────────────────────────────────────────
+const BASE_START = ['anrede','name','geburtsdatum','familienstand'];
+
+const BERUF_PATHS = {
+  'Angestellter': ['beruf','ang-bezeichnung','ang-koerperlich','ang-bildung','ang-ausbildung'],
+  'Azubi':        ['beruf','az-beruf','az-lehrjahr','az-koerperlich'],
+  'Student':      ['beruf','st-studiengang','st-semester','st-abschluss'],
+  'Selbstständiger': ['beruf','ss-branche','ss-rechtsform','ss-seit','ss-koerperlich'],
+  'Beamter':      ['beruf','bm-verhaeltnis','bm-dienstbeginn','bm-besoldung','bm-dienststelle','bm-bildung'],
+};
+
+const BASE_END = [
+  'adresse','telefon','email',
+  'jahresbrutto','netto','ausgaben','ruecklagen','schulden',
+  'groesse','gewicht','krankenkasse','raucher',
+  'immobilie','wunschrente','rentenalter','prioritaeten',
+  'sonstiges','datenschutz'
+];
+
+let sequence = [];
+let idx = -1; // -1 = welcome
+
+function buildSequence() {
+  const b = data.beruf || 'Angestellter';
+  const married = (data.familienstand || '') === 'Verheiratet';
+  const hasKinder = (data.kinder_hat || '') === 'Ja';
+
+  let seq = [...BASE_START];
+  if (married) seq.push('heiratsdatum');
+  seq.push('kinder');
+  seq = seq.concat(BERUF_PATHS[b] || BERUF_PATHS['Angestellter']);
+  seq = seq.concat(BASE_END);
+  sequence = seq;
+}
+
+function updateProgress() {
+  if (idx < 0) return;
+  const total = sequence.length;
+  const pct = Math.round(((idx + 1) / total) * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  const sid = sequence[idx];
+  const ey = document.getElementById('ey-' + sid);
+  const section = ey ? ey.textContent.split('·')[0].trim() : '';
+  document.getElementById('progSection').textContent = section;
+  document.getElementById('progCount').textContent = `Schritt ${idx + 1} von ${total}`;
+}
+
+function showScreen(sid) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('s-' + sid);
+  if (el) { el.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+
+function startForm() {
+  buildSequence();
+  idx = 0;
+  document.getElementById('progWrap').style.display = 'block';
+  showScreen(sequence[idx]);
+  updateProgress();
+}
+
+function advance() {
+  if (idx < sequence.length - 1) {
+    idx++;
+    if (sequence[idx] === 'beruf') buildSequence();
+    showScreen(sequence[idx]);
+    updateProgress();
+  }
+}
+
+function back() {
+  if (idx > 0) {
+    idx--;
+    showScreen(sequence[idx]);
+    updateProgress();
+  } else if (idx === 0) {
+    idx = -1;
+    document.getElementById('progWrap').style.display = 'none';
+    showScreen('welcome');
+  }
+}
+
+// ── Interactions ───────────────────────────────────────────────
+function pick(el, key) {
+  const container = el.closest('.choice-grid') || el.closest('.olist') || el.closest('.pill-row');
+  if (container) container.querySelectorAll('.cbtn, .oitem, .pbtn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  data[key] = el.textContent.trim();
+}
+
+function pickBeruf(el, val) {
+  document.querySelectorAll('#s-beruf .oitem').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  data.beruf = val;
+  buildSequence();
+  setTimeout(advance, 180);
+}
+
+function multiPick(el) { el.classList.toggle('active'); }
+
+// ── Kinder ────────────────────────────────────────────────────
+let kinderCount = 0;
+function showKinder(show) {
+  data.kinder_hat = show ? 'Ja' : 'Nein';
+  document.getElementById('kinder-block').style.display = show ? 'block' : 'none';
+  if (show && kinderCount === 0) addChild();
+}
+function addChild() {
+  if (kinderCount >= 5) return;
+  kinderCount++;
+  const i = kinderCount;
+  const div = document.createElement('div');
+  div.className = 'child-row'; div.id = 'child-' + i;
+  div.innerHTML = `<div class="fw"><label class="lbl">Name Kind ${i}</label><input type="text" id="cname-${i}" placeholder="Vorname" /></div><div class="fw"><label class="lbl">Geburtsdatum</label><input type="date" id="cgeb-${i}" /></div><button class="child-rm" onclick="removeChild(${i})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  document.getElementById('kinder-list').appendChild(div);
+  if (kinderCount >= 5) document.getElementById('btn-add-child').style.display = 'none';
+}
+function removeChild(i) {
+  const el = document.getElementById('child-' + i);
+  if (el) el.remove();
+  kinderCount = Math.max(0, kinderCount - 1);
+  document.getElementById('btn-add-child').style.display = 'flex';
+}
+
+// ── Submit ────────────────────────────────────────────────────
+function submitForm() {
+  if (!document.getElementById('datenschutz').checked) { showToast('Bitte bestätige die Datenschutzerklärung.'); return; }
+  const fields = ['vorname','nachname','geburtsdatum','heiratsdatum','berufsbezeichnung',
+    'ausbildungsberuf','studiengang','branche','selbst-seit','dienstbeginn',
+    'besoldungsgruppe','besoldungsstufe','dienststelle',
+    'strasse','plz','ort','geburtsort','telefon','email',
+    'jahresbrutto','netto','ausgaben','ruecklagen','wunschrente',
+    'bestehende_vertraege','schulden_info','sonstiges','krankenkasse'];
+  fields.forEach(id => { const el = document.getElementById(id); if (el && el.value) data[id] = el.value; });
+  const sliders = ['koerperlich','koerperlich-az','koerperlich-ss'];
+  sliders.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value + ' %'; });
+  const kinder = [];
+  for (let i = 1; i <= 5; i++) {
+    const n = document.getElementById('cname-' + i);
+    const g = document.getElementById('cgeb-' + i);
+    if (n && n.value) kinder.push({ name: n.value, geb: g ? g.value : '' });
+  }
+  if (kinder.length) data.kinder = kinder;
+  const prios = [];
+  document.querySelectorAll('#prio-list .oitem.active').forEach(el => prios.push(el.textContent.trim()));
+  if (prios.length) data.prioritaeten = prios;
+  data.bundesland = document.getElementById('bundesland').value;
+  data.timestamp = new Date().toISOString();
+  data.id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+  const SUPA_URL = 'https://jtlblbgxzbxjplamdpiu.supabase.co';
+  const SUPA_KEY = 'sb_publishable_XZaNy8RC0iATbuq2IVJ0Qg_9qNDsMBd';
+
+  const btn = document.querySelector('#s-datenschutz .btn-next');
+  btn.textContent = 'Wird gespeichert…';
+  btn.disabled = true;
+
+  // Berater-Email aus Supabase laden dann speichern + mailen
+  const beraterPromise = nr
+    ? fetch(SUPA_URL + '/rest/v1/berater?nr=eq.' + nr + '&select=name,email', {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      }).then(r => r.json()).then(rows => rows[0] || {})
+    : Promise.resolve({});
+
+  beraterPromise.then(berater => {
+    return fetch(SUPA_URL + '/rest/v1/planungsbogen', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        id: data.id,
+        berater: nr || '',
+        vorname: data.vorname || '',
+        nachname: data.nachname || '',
+        data: data
+      })
+    }).then(res => {
+      if (!res.ok) throw new Error('Fehler');
+      // EmailJS benachrichtigung
+      if (berater.email) {
+        const mandantName = [data.vorname, data.nachname].filter(Boolean).join(' ') || 'Unbekannt';
+        const datum = new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: 'service_0jj5ihm',
+            template_id: 'template_vgiq0vd',
+            user_id: 'KenDwBUdjTdLSbgM-',
+            template_params: {
+              to_email: berater.email,
+              berater_name: berater.name || '',
+              mandant_name: mandantName,
+              beruf: data.beruf || '–',
+              datum: datum,
+              admin_link: 'https://planungsbogen.vercel.app/planungsbogen_admin.html'
+            }
+          })
+        });
+      }
+      document.getElementById('progWrap').style.display = 'none';
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('s-done').classList.add('active');
+    });
+  }).catch(() => {
+    btn.textContent = 'Jetzt absenden →';
+    btn.disabled = false;
+    showToast('Verbindungsfehler – bitte nochmal versuchen.');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+showScreen('welcome');
+</script>
+</body>
+</html>
