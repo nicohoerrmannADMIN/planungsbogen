@@ -1319,6 +1319,25 @@ function submitForm() {
       // EmailJS benachrichtigung
       if (berater.email) {
         const mandantName = [data.vorname, data.nachname].filter(Boolean).join(' ') || 'Unbekannt';
+        // Alle Angaben direkt in die Mail (Text + HTML-Tabelle). Im EmailJS-Template {{alle_angaben}} bzw. {{{alle_angaben_html}}} einsetzen.
+        const LABEL = {vorname:'Vorname',nachname:'Nachname',anrede:'Anrede',geburtsdatum:'Geburtsdatum',familienstand:'Familienstand',heiratsdatum:'Heiratsdatum',kinder_hat:'Kinder',kinder:'Kinder',
+          beruf:'Beruf',berufsbezeichnung:'Berufsbezeichnung',ausbildungsberuf:'Ausbildungsberuf',studiengang:'Studiengang',branche:'Branche','selbst-seit':'Selbstständig seit',dienstbeginn:'Dienstbeginn',
+          besoldungsgruppe:'Besoldungsgruppe',besoldungsstufe:'Besoldungsstufe',dienststelle:'Dienststelle',koerperlich:'Körperliche Tätigkeit','koerperlich-az':'Körperliche Tätigkeit','koerperlich-ss':'Körperliche Tätigkeit',
+          strasse:'Straße',plz:'PLZ',ort:'Ort',bundesland:'Bundesland',telefon:'Telefon',email:'E-Mail',jahresbrutto:'Jahresbrutto',netto:'Netto / Monat',ausgaben:'Ausgaben / Monat',ruecklagen:'Rücklagen',wunschrente:'Wunschrente',
+          rentenalter:'Rentenalter',krankenkasse:'Krankenkasse',immobilie:'Immobilie',raucher:'Raucher',groesse:'Größe',gewicht:'Gewicht',prioritaeten:'Prioritäten',sonstiges:'Sonstiges',
+          en_placeofbirth:'Geburtsort',en_countryofbirth:'Geburtsland',en_nationality:'Nationalität',en_since_germany:'In Deutschland seit',en_permit_until:'Aufenthaltstitel bis'};
+        const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+        const zeilen = [];
+        Object.keys(data).forEach(k => {
+          if (k === 'id' || k === 'timestamp' || k === 'lang') return;
+          let v = data[k]; if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return;
+          if (k === 'kinder' && Array.isArray(v)) v = v.map(c => (c.name || '') + (c.geb ? ' (' + c.geb + ')' : '')).join(', ');
+          else if (Array.isArray(v)) v = v.join(', ');
+          else if (typeof v === 'object') v = JSON.stringify(v);
+          zeilen.push([LABEL[k] || k, String(v)]);
+        });
+        const alleAngaben = zeilen.map(z => z[0] + ': ' + z[1]).join('\n');
+        const alleAngabenHtml = '<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px">' + zeilen.map(z => '<tr><td style="padding:5px 10px 5px 0;color:#666;border-bottom:1px solid #eee;vertical-align:top">' + esc(z[0]) + '</td><td style="padding:5px 0;border-bottom:1px solid #eee">' + esc(z[1]) + '</td></tr>').join('') + '</table>';
         const datum = new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
         fetch('https://api.emailjs.com/api/v1.0/email/send', {
           method: 'POST',
@@ -1333,7 +1352,9 @@ function submitForm() {
               mandant_name: mandantName,
               beruf: data.beruf || '–',
               datum: datum,
-              admin_link: 'https://planungsbogen.vercel.app/planungsbogen_admin.html'
+              admin_link: 'https://planungsbogen.vercel.app/planungsbogen_admin.html',
+              alle_angaben: alleAngaben,
+              alle_angaben_html: alleAngabenHtml
             }
           })
         });
