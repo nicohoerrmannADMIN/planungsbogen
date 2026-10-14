@@ -1264,12 +1264,17 @@ function submitForm() {
     'besoldungsgruppe','besoldungsstufe','dienststelle',
     'strasse','plz','ort','telefon','email',
     'jahresbrutto','netto','ausgaben','ruecklagen','wunschrente',
-    'sonstiges','krankenkasse',
+    'sonstiges','krankenkasse','groesse','gewicht',
     'en_placeofbirth','en_countryofbirth','en_nationality','en_since_germany',
     'en_permit_until'];
   fields.forEach(id => { const el = document.getElementById(id); if (el && el.value) data[id] = el.value; });
-  const sliders = ['koerperlich','koerperlich-az','koerperlich-ss'];
-  sliders.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value + ' %'; });
+  // Koerperliche Taetigkeit: nur der Regler zum gewaehlten Beruf (Student/Beamter haben keinen)
+  const beruf = data.beruf || '';
+  const slider = /Azubi|Apprentice/.test(beruf) ? 'koerperlich-az'
+               : /Selbst|Self/.test(beruf)      ? 'koerperlich-ss'
+               : /Angestellt|Employed/.test(beruf) ? 'koerperlich' : null;
+  ['koerperlich','koerperlich-az','koerperlich-ss'].forEach(id => { delete data[id]; });
+  if (slider) { const el = document.getElementById(slider); if (el) data[slider] = el.value + ' %'; }
   const kinder = [];
   for (let i = 1; i <= 5; i++) {
     const n = document.getElementById('cname-' + i);
